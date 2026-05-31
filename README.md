@@ -6,7 +6,7 @@ MadIslandWater 是一个基于 .NET 10 的 Windows 小工具，用来安装 Mad 
 
 - 选择 Mad Island 游戏目录。
 - 自动安装官方 DLC 到 `Mad Island_Data\StreamingAssets\DLC\dlc_00`。
-- 如果游戏仍是 `data.unity3d` bundle，会先解包到 `Mad Island_Data`，再删除原 `data.unity3d`。
+- 如果游戏仍是 `data.unity3d` bundle，会先解包到同一个 `Mad Island_Data` 目录，再把原 `data.unity3d` 改名为 `data.unity3d.disabled.时间戳`。
 - 直接修改解包后的 `sharedassets0.assets`，避免重写 bundle 导致游戏打不开。
 - 默认马赛克 Shader PathID 为 `1603`；留空可自动扫描。
 - 修改前会在 `Mad Island_Data\tmp\backup` 创建带时间戳的备份。

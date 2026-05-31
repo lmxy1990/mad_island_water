@@ -128,8 +128,10 @@ internal sealed class MadIslandPatcher
                 throw new InvalidOperationException("data.unity3d 已解包，但没有得到 sharedassets0.assets。");
             }
 
-            File.Delete(bundlePath);
-            log("已删除原 data.unity3d，游戏将使用解包后的资源文件。");
+            var disabledBundlePath = RenameBundleOutOfTheWay(bundlePath);
+            backups.Add(disabledBundlePath);
+            log($"已重命名原 data.unity3d：{disabledBundlePath}");
+            log("游戏将使用同目录下解包后的资源文件。");
             return sharedAssetsPath;
         }
 
@@ -190,7 +192,27 @@ internal sealed class MadIslandPatcher
         }
 
         Directory.Delete(extractDirectory, recursive: true);
+        DeleteDirectoryIfEmpty(Path.GetDirectoryName(extractDirectory)!);
         log($"已把 {copiedCount} 个资源文件放入 Mad Island_Data。");
+    }
+
+    private static string RenameBundleOutOfTheWay(string bundlePath)
+    {
+        var directory = Path.GetDirectoryName(bundlePath)!;
+        var timestamp = DateTime.Now.ToString("yyyyMMddHHmmss");
+
+        for (var suffix = 0; suffix < 100; suffix++)
+        {
+            var suffixText = suffix == 0 ? string.Empty : $".{suffix}";
+            var destination = Path.Combine(directory, $"data.unity3d.disabled.{timestamp}{suffixText}");
+            if (!File.Exists(destination))
+            {
+                File.Move(bundlePath, destination);
+                return destination;
+            }
+        }
+
+        throw new IOException("无法为 data.unity3d 生成可用的改名路径。");
     }
 
     private void PatchMosaicShaderInAssetsFile(string assetsPath, long? preferredPathId, bool backupFiles, List<string> backups)
@@ -243,6 +265,7 @@ internal sealed class MadIslandPatcher
         log("替换原 sharedassets0.assets。");
         File.Copy(temporaryFile, assetsPath, overwrite: true);
         File.Delete(temporaryFile);
+        DeleteDirectoryIfEmpty(Path.GetDirectoryName(temporaryFile)!);
         log("马赛克 Shader 参数已修改为 0。");
     }
 
@@ -328,6 +351,14 @@ internal sealed class MadIslandPatcher
 
             destination.Write(buffer, 0, read);
             remaining -= read;
+        }
+    }
+
+    private static void DeleteDirectoryIfEmpty(string directory)
+    {
+        if (Directory.Exists(directory) && !Directory.EnumerateFileSystemEntries(directory).Any())
+        {
+            Directory.Delete(directory);
         }
     }
 
