@@ -17,6 +17,10 @@ The official DLC file is not included in this repository or release assets. Down
 
 In the app, select the downloaded file manually. The tool copies it to the game as `dlc_00`.
 
+## Docs
+
+- [Mad Island NPC Workshop 中文图文教程](docs/npc-workshop-guide.md)
+
 ## Build
 
 ```powershell
