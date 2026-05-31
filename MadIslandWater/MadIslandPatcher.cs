@@ -45,7 +45,56 @@ internal sealed class MadIslandPatcher
         return new PatchResult(dlcInstalled, mosaicPatched, backupFiles);
     }
 
+    public void Restore(string gameDirectory)
+    {
+        ValidateGameRoot(gameDirectory);
+
+        var gameDataDirectory = Path.Combine(gameDirectory, "Mad Island_Data");
+        if (!Directory.Exists(gameDataDirectory))
+        {
+            throw new DirectoryNotFoundException($"没有找到 Mad Island_Data 目录：{gameDataDirectory}");
+        }
+
+        var dataBundlePath = Path.Combine(gameDataDirectory, "data.unity3d");
+        if (File.Exists(dataBundlePath))
+        {
+            EnsureUnityFsFile(dataBundlePath, "data.unity3d 不是 UnityFS bundle。");
+            log("data.unity3d 已存在，执行解包资源清理。");
+            var currentBundleEntries = ReadBundleEntryPaths(dataBundlePath, gameDataDirectory);
+            var cleanupResult = RemoveExtractedFiles(gameDataDirectory, currentBundleEntries);
+            LogRestoreCleanupResult(cleanupResult.RemovedFiles, cleanupResult.FailedFiles);
+            DeleteDirectoryIfEmpty(Path.Combine(gameDataDirectory, "tmp"));
+            return;
+        }
+
+        var disabledBundle = FindLatestDisabledBundle(gameDataDirectory);
+        EnsureUnityFsFile(disabledBundle.FullName, "被改名的 data.unity3d 不是 UnityFS bundle。");
+        log($"找到可还原文件：{disabledBundle.FullName}");
+
+        var extractedPaths = ReadBundleEntryPaths(disabledBundle.FullName, gameDataDirectory);
+        File.Move(disabledBundle.FullName, dataBundlePath);
+        log($"已恢复 data.unity3d：{dataBundlePath}");
+
+        var (removedFiles, failedFiles) = RemoveExtractedFiles(gameDataDirectory, extractedPaths);
+        LogRestoreCleanupResult(removedFiles, failedFiles);
+        DeleteDirectoryIfEmpty(Path.Combine(gameDataDirectory, "tmp"));
+    }
+
     public void ValidateGameDirectory(string gameDirectory)
+    {
+        ValidateGameRoot(gameDirectory);
+
+        var dataBundle = Path.Combine(gameDirectory, "Mad Island_Data", "data.unity3d");
+        var sharedAssets = Path.Combine(gameDirectory, "Mad Island_Data", "sharedassets0.assets");
+
+        if (!File.Exists(dataBundle) && !File.Exists(sharedAssets))
+        {
+            throw new FileNotFoundException("没有找到 Mad Island_Data\\data.unity3d 或 sharedassets0.assets。", dataBundle);
+        }
+
+    }
+
+    private static void ValidateGameRoot(string gameDirectory)
     {
         if (string.IsNullOrWhiteSpace(gameDirectory))
         {
@@ -59,8 +108,6 @@ internal sealed class MadIslandPatcher
 
         var exe = Path.Combine(gameDirectory, "Mad Island.exe");
         var unityPlayer = Path.Combine(gameDirectory, "UnityPlayer.dll");
-        var dataBundle = Path.Combine(gameDirectory, "Mad Island_Data", "data.unity3d");
-        var sharedAssets = Path.Combine(gameDirectory, "Mad Island_Data", "sharedassets0.assets");
 
         if (!File.Exists(exe))
         {
@@ -71,12 +118,6 @@ internal sealed class MadIslandPatcher
         {
             throw new FileNotFoundException("没有找到 UnityPlayer.dll。", unityPlayer);
         }
-
-        if (!File.Exists(dataBundle) && !File.Exists(sharedAssets))
-        {
-            throw new FileNotFoundException("没有找到 Mad Island_Data\\data.unity3d 或 sharedassets0.assets。", dataBundle);
-        }
-
     }
 
     private void InstallDlc(string gameDirectory, string sourceFile)
@@ -213,6 +254,94 @@ internal sealed class MadIslandPatcher
         }
 
         throw new IOException("无法为 data.unity3d 生成可用的改名路径。");
+    }
+
+    private static FileInfo FindLatestDisabledBundle(string gameDataDirectory)
+    {
+        var directory = new DirectoryInfo(gameDataDirectory);
+        var candidates = directory
+            .EnumerateFiles("data.unity3d.disabled.*", SearchOption.TopDirectoryOnly)
+            .OrderByDescending(file => file.LastWriteTimeUtc)
+            .ThenByDescending(file => file.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (candidates.Count == 0)
+        {
+            throw new FileNotFoundException("没有找到 data.unity3d.disabled.*，无法还原。");
+        }
+
+        return candidates[0];
+    }
+
+    private static List<string> ReadBundleEntryPaths(string bundlePath, string gameDataDirectory)
+    {
+        var paths = new List<string>();
+        var manager = new AssetsManager();
+        using var inputStream = File.Open(bundlePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        var bundle = manager.LoadBundleFile(inputStream, bundlePath, unpackIfPacked: true);
+
+        try
+        {
+            foreach (var entry in bundle.file.BlockAndDirInfo.DirectoryInfos)
+            {
+                if ((entry.Flags & 0x02) != 0)
+                {
+                    continue;
+                }
+
+                paths.Add(GetSafeChildPath(gameDataDirectory, entry.Name));
+            }
+        }
+        finally
+        {
+            manager.UnloadAll(unloadClassData: true);
+        }
+
+        return paths;
+    }
+
+    private (int RemovedFiles, int FailedFiles) RemoveExtractedFiles(string gameDataDirectory, IEnumerable<string> extractedPaths)
+    {
+        var removedFiles = 0;
+        var failedFiles = 0;
+        var parentDirectories = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var path in extractedPaths.OrderByDescending(path => path.Length))
+        {
+            if (!File.Exists(path))
+            {
+                continue;
+            }
+
+            try
+            {
+                parentDirectories.Add(Path.GetDirectoryName(path)!);
+                File.Delete(path);
+                removedFiles++;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                failedFiles++;
+                log($"删除失败：{path}；{ex.Message}");
+            }
+        }
+
+        foreach (var directory in parentDirectories.OrderByDescending(directory => directory.Length))
+        {
+            DeleteEmptyDirectoriesUpTo(directory, gameDataDirectory);
+        }
+
+        return (removedFiles, failedFiles);
+    }
+
+    private void LogRestoreCleanupResult(int removedFiles, int failedFiles)
+    {
+        log($"已删除解包资源文件：{removedFiles} 个。");
+
+        if (failedFiles > 0)
+        {
+            log($"有 {failedFiles} 个解包资源文件删除失败，请关闭游戏后再次执行还原清理。");
+        }
     }
 
     private void PatchMosaicShaderInAssetsFile(string assetsPath, long? preferredPathId, bool backupFiles, List<string> backups)
@@ -359,6 +488,29 @@ internal sealed class MadIslandPatcher
         if (Directory.Exists(directory) && !Directory.EnumerateFileSystemEntries(directory).Any())
         {
             Directory.Delete(directory);
+        }
+    }
+
+    private static void DeleteEmptyDirectoriesUpTo(string directory, string stopDirectory)
+    {
+        var stop = Path.GetFullPath(stopDirectory).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var current = Path.GetFullPath(directory).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+        while (!string.Equals(current, stop, StringComparison.OrdinalIgnoreCase) && Directory.Exists(current))
+        {
+            if (Directory.EnumerateFileSystemEntries(current).Any())
+            {
+                break;
+            }
+
+            Directory.Delete(current);
+            var parent = Directory.GetParent(current);
+            if (parent is null)
+            {
+                break;
+            }
+
+            current = parent.FullName.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         }
     }
 

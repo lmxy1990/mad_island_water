@@ -39,22 +39,23 @@ partial class Form1
         pathIdLabel = new Label();
         pathIdHintLabel = new Label();
         runButton = new Button();
+        restoreButton = new Button();
         statusLabel = new Label();
         logTextBox = new TextBox();
         gamePathLabel = new Label();
         dlcPathLabel = new Label();
         SuspendLayout();
-        // 
+        //
         // gamePathTextBox
-        // 
+        //
         gamePathTextBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
         gamePathTextBox.Location = new Point(24, 48);
         gamePathTextBox.Name = "gamePathTextBox";
         gamePathTextBox.Size = new Size(640, 31);
         gamePathTextBox.TabIndex = 1;
-        // 
+        //
         // browseGameButton
-        // 
+        //
         browseGameButton.Anchor = AnchorStyles.Top | AnchorStyles.Right;
         browseGameButton.Location = new Point(676, 47);
         browseGameButton.Name = "browseGameButton";
@@ -155,14 +156,24 @@ partial class Form1
         runButton.UseVisualStyleBackColor = true;
         runButton.Click += runButton_Click;
         // 
+        // restoreButton
+        //
+        restoreButton.Location = new Point(224, 296);
+        restoreButton.Name = "restoreButton";
+        restoreButton.Size = new Size(180, 42);
+        restoreButton.TabIndex = 14;
+        restoreButton.Text = "还原资源";
+        restoreButton.UseVisualStyleBackColor = true;
+        restoreButton.Click += restoreButton_Click;
+        //
         // statusLabel
         // 
         statusLabel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
         statusLabel.AutoEllipsis = true;
-        statusLabel.Location = new Point(224, 305);
+        statusLabel.Location = new Point(424, 305);
         statusLabel.Name = "statusLabel";
-        statusLabel.Size = new Size(564, 24);
-        statusLabel.TabIndex = 14;
+        statusLabel.Size = new Size(364, 24);
+        statusLabel.TabIndex = 15;
         statusLabel.Text = "就绪";
         // 
         // logTextBox
@@ -174,7 +185,7 @@ partial class Form1
         logTextBox.ReadOnly = true;
         logTextBox.ScrollBars = ScrollBars.Vertical;
         logTextBox.Size = new Size(764, 190);
-        logTextBox.TabIndex = 15;
+        logTextBox.TabIndex = 16;
         // 
         // gamePathLabel
         // 
@@ -205,6 +216,7 @@ partial class Form1
         Controls.Add(gamePathLabel);
         Controls.Add(logTextBox);
         Controls.Add(statusLabel);
+        Controls.Add(restoreButton);
         Controls.Add(runButton);
         Controls.Add(backupCheckBox);
         Controls.Add(patchMosaicCheckBox);
@@ -234,6 +246,7 @@ partial class Form1
     private Label pathIdLabel;
     private Label pathIdHintLabel;
     private Button runButton;
+    private Button restoreButton;
     private Label statusLabel;
     private TextBox logTextBox;
     private Label gamePathLabel;

@@ -35,10 +35,18 @@ static class Program
         {
             var gameDirectory = GetOption(args, "--game") ?? throw new InvalidOperationException("缺少 --game 参数。");
             var dlcFile = GetOption(args, "--dlc") ?? string.Empty;
+            var patcher = new MadIslandPatcher(Console.WriteLine);
+
+            if (args.Contains("--restore", StringComparer.OrdinalIgnoreCase))
+            {
+                patcher.Restore(gameDirectory);
+                Console.WriteLine("还原完成。");
+                return true;
+            }
+
             var pathId = args.Contains("--scan", StringComparer.OrdinalIgnoreCase)
                 ? null
                 : ParsePathId(GetOption(args, "--pathid"));
-            var patcher = new MadIslandPatcher(Console.WriteLine);
             var options = new PatchOptions(
                 gameDirectory,
                 dlcFile,

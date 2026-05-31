@@ -8,6 +8,7 @@ MadIslandWater 是一个基于 .NET 10 的 Windows 小工具，用来安装 Mad 
 - 自动安装官方 DLC 到 `Mad Island_Data\StreamingAssets\DLC\dlc_00`。
 - 如果游戏仍是 `data.unity3d` bundle，会先解包到同一个 `Mad Island_Data` 目录，再把原 `data.unity3d` 改名为 `data.unity3d.disabled.时间戳`。
 - 直接修改解包后的 `sharedassets0.assets`，避免重写 bundle 导致游戏打不开。
+- 可一键还原资源：恢复被改名的 `data.unity3d`，并删除解包出来的资源文件。
 - 默认马赛克 Shader PathID 为 `1603`；留空可自动扫描。
 - 修改前会在 `Mad Island_Data\tmp\backup` 创建带时间戳的备份。
 
@@ -33,6 +34,15 @@ D:\Program Files (x86)\Steam\steamapps\common\Mad Island
 3. 确认 DLC 文件路径，默认会使用仓库里的 `dlc\dlc_00.zip`。
 4. PathID 默认使用 `1603`，一般不需要修改；如果游戏版本变化，也可以清空输入框让程序自动扫描。
 5. 点击执行，等待完成。
+
+## 还原
+
+点击界面里的“还原资源”会执行以下操作：
+
+- 找到最新的 `Mad Island_Data\data.unity3d.disabled.*`。
+- 将它改回 `Mad Island_Data\data.unity3d`。
+- 按原 bundle 文件列表删除解包出来的 loose 资源文件。
+- 不会删除 `Mad Island_Data\StreamingAssets\DLC\dlc_00`。
 
 ## 文档
 
@@ -73,3 +83,4 @@ MadIslandWater.exe --cli --game "D:\Program Files (x86)\Steam\steamapps\common\M
 - `--no-dlc`：不安装 DLC。
 - `--no-mosaic`：不修改马赛克 Shader。
 - `--no-backup`：不创建资源文件备份。
+- `--restore`：还原被改名的 `data.unity3d`，并删除解包出来的资源文件。

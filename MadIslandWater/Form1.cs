@@ -47,7 +47,7 @@ public partial class Form1 : Form
 
     private async void runButton_Click(object sender, EventArgs e)
     {
-        runButton.Enabled = false;
+        SetActionsEnabled(false);
         SetStatus("处理中...");
         logTextBox.Clear();
 
@@ -83,7 +83,48 @@ public partial class Form1 : Form
         }
         finally
         {
-            runButton.Enabled = true;
+            SetActionsEnabled(true);
+        }
+    }
+
+    private async void restoreButton_Click(object sender, EventArgs e)
+    {
+        var confirm = MessageBox.Show(
+            this,
+            "将恢复原 data.unity3d，并删除解包出来的资源文件。DLC 文件不会删除。是否继续？",
+            Text,
+            MessageBoxButtons.YesNo,
+            MessageBoxIcon.Warning,
+            MessageBoxDefaultButton.Button2);
+
+        if (confirm != DialogResult.Yes)
+        {
+            return;
+        }
+
+        SetActionsEnabled(false);
+        SetStatus("还原中...");
+        logTextBox.Clear();
+
+        try
+        {
+            await Task.Run(() => patcher.Restore(gamePathTextBox.Text.Trim()));
+            AppendLog("");
+            AppendLog("还原完成。");
+            SetStatus("完成");
+            MessageBox.Show(this, "还原完成。", Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+        catch (Exception ex)
+        {
+            AppendLog("");
+            AppendLog("还原失败：");
+            AppendLog(ex.Message);
+            SetStatus("失败");
+            MessageBox.Show(this, ex.Message, Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+        finally
+        {
+            SetActionsEnabled(true);
         }
     }
 
@@ -107,6 +148,12 @@ public partial class Form1 : Form
         }
 
         statusLabel.Text = message;
+    }
+
+    private void SetActionsEnabled(bool enabled)
+    {
+        runButton.Enabled = enabled;
+        restoreButton.Enabled = enabled;
     }
 
     private long? ParsePathId()
