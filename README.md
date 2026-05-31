@@ -1,14 +1,14 @@
 # MadIslandWater
 
-MadIslandWater 是一个基于 .NET 10 的 Windows 小工具，用来安装 Mad Island 官方 DLC，并把 `data.unity3d` 里的马赛克 Shader 参数改为 0。
+MadIslandWater 是一个基于 .NET 10 的 Windows 小工具，用来安装 Mad Island 官方 DLC，并把马赛克 Shader 参数改为 0。
 
 ## 功能
 
 - 选择 Mad Island 游戏目录。
 - 自动安装官方 DLC 到 `Mad Island_Data\StreamingAssets\DLC\dlc_00`。
-- 修改 `data.unity3d` 内的 `sharedassets0.assets`。
-- 默认马赛克 Shader PathID 为 `1964`；留空可自动扫描。
-- 应用旧解码补丁：把 `UnityPlayer.dll` 复制到 `Mad Island_Data\StreamingAssets\XML\none.bat`。
+- 如果游戏仍是 `data.unity3d` bundle，会先解包到 `Mad Island_Data`，再删除原 `data.unity3d`。
+- 直接修改解包后的 `sharedassets0.assets`，避免重写 bundle 导致游戏打不开。
+- 默认马赛克 Shader PathID 为 `1603`；留空可自动扫描。
 - 修改前会在 `Mad Island_Data\tmp\backup` 创建带时间戳的备份。
 
 ## DLC
@@ -31,7 +31,7 @@ D:\Program Files (x86)\Steam\steamapps\common\Mad Island
 ```
 
 3. 确认 DLC 文件路径，默认会使用仓库里的 `dlc\dlc_00.zip`。
-4. PathID 默认使用 `1964`，一般不需要修改。
+4. PathID 默认使用 `1603`，一般不需要修改；如果游戏版本变化，也可以清空输入框让程序自动扫描。
 5. 点击执行，等待完成。
 
 ## 文档
@@ -68,9 +68,8 @@ MadIslandWater.exe --cli --game "D:\Program Files (x86)\Steam\steamapps\common\M
 
 可用参数：
 
-- `--pathid 1964`：使用指定 Shader PathID。
+- `--pathid 1603`：使用指定 Shader PathID。
 - `--scan`：跳过默认 PathID，自动扫描 Shader。
 - `--no-dlc`：不安装 DLC。
 - `--no-mosaic`：不修改马赛克 Shader。
-- `--no-legacy`：不应用旧解码补丁。
-- `--no-backup`：不创建 `data.unity3d` 备份。
+- `--no-backup`：不创建资源文件备份。

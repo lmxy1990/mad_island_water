@@ -44,16 +44,15 @@ static class Program
                 dlcFile,
                 InstallDlc: !args.Contains("--no-dlc", StringComparer.OrdinalIgnoreCase),
                 ApplyMosaicPatch: !args.Contains("--no-mosaic", StringComparer.OrdinalIgnoreCase),
-                ApplyLegacyDecode: !args.Contains("--no-legacy", StringComparer.OrdinalIgnoreCase),
                 BackupFiles: !args.Contains("--no-backup", StringComparer.OrdinalIgnoreCase),
                 MosaicShaderPathId: pathId);
 
             var result = patcher.Apply(options);
             Console.WriteLine("处理完成。");
 
-            if (result.BackupFile is not null)
+            foreach (var backupFile in result.BackupFiles)
             {
-                Console.WriteLine($"备份文件：{result.BackupFile}");
+                Console.WriteLine($"备份文件：{backupFile}");
             }
 
             return true;

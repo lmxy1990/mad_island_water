@@ -5,7 +5,7 @@ namespace MadIslandWater;
 
 internal sealed class MadIslandPatcher
 {
-    public const long CurrentMosaicShaderPathId = 1964;
+    public const long CurrentMosaicShaderPathId = 1603;
 
     private static readonly byte[] UnityFsHeader = "UnityFS"u8.ToArray();
     private static readonly byte[] MosaicShaderName = "Ist/MosaicField"u8.ToArray();
@@ -25,14 +25,10 @@ internal sealed class MadIslandPatcher
         ValidateGameDirectory(options.GameDirectory);
 
         var gameDataDirectory = Path.Combine(options.GameDirectory, "Mad Island_Data");
-        var dataBundle = Path.Combine(gameDataDirectory, "data.unity3d");
-        var backupFile = options.BackupFiles && options.ApplyMosaicPatch
-            ? CreateBackup(dataBundle)
-            : null;
+        var backupFiles = new List<string>();
 
         var dlcInstalled = false;
         var mosaicPatched = false;
-        var legacyDecodeInstalled = false;
 
         if (options.InstallDlc)
         {
@@ -42,17 +38,11 @@ internal sealed class MadIslandPatcher
 
         if (options.ApplyMosaicPatch)
         {
-            PatchMosaicShaderInBundle(dataBundle, options.MosaicShaderPathId);
+            PatchMosaicShader(gameDataDirectory, options.MosaicShaderPathId, options.BackupFiles, backupFiles);
             mosaicPatched = true;
         }
 
-        if (options.ApplyLegacyDecode)
-        {
-            InstallLegacyDecodeFile(options.GameDirectory);
-            legacyDecodeInstalled = true;
-        }
-
-        return new PatchResult(dlcInstalled, mosaicPatched, legacyDecodeInstalled, backupFile);
+        return new PatchResult(dlcInstalled, mosaicPatched, backupFiles);
     }
 
     public void ValidateGameDirectory(string gameDirectory)
@@ -70,7 +60,7 @@ internal sealed class MadIslandPatcher
         var exe = Path.Combine(gameDirectory, "Mad Island.exe");
         var unityPlayer = Path.Combine(gameDirectory, "UnityPlayer.dll");
         var dataBundle = Path.Combine(gameDirectory, "Mad Island_Data", "data.unity3d");
-        var xmlDirectory = Path.Combine(gameDirectory, "Mad Island_Data", "StreamingAssets", "XML");
+        var sharedAssets = Path.Combine(gameDirectory, "Mad Island_Data", "sharedassets0.assets");
 
         if (!File.Exists(exe))
         {
@@ -82,15 +72,11 @@ internal sealed class MadIslandPatcher
             throw new FileNotFoundException("没有找到 UnityPlayer.dll。", unityPlayer);
         }
 
-        if (!File.Exists(dataBundle))
+        if (!File.Exists(dataBundle) && !File.Exists(sharedAssets))
         {
-            throw new FileNotFoundException("没有找到 Mad Island_Data\\data.unity3d。", dataBundle);
+            throw new FileNotFoundException("没有找到 Mad Island_Data\\data.unity3d 或 sharedassets0.assets。", dataBundle);
         }
 
-        if (!Directory.Exists(xmlDirectory))
-        {
-            throw new DirectoryNotFoundException($"没有找到 XML 目录：{xmlDirectory}");
-        }
     }
 
     private void InstallDlc(string gameDirectory, string sourceFile)
@@ -116,73 +102,146 @@ internal sealed class MadIslandPatcher
         log($"已安装 DLC 到：{destination}");
     }
 
-    private void InstallLegacyDecodeFile(string gameDirectory)
+    private void PatchMosaicShader(string gameDataDirectory, long? preferredPathId, bool backupFiles, List<string> backups)
     {
-        var source = Path.Combine(gameDirectory, "UnityPlayer.dll");
-        var destinationDirectory = Path.Combine(gameDirectory, "Mad Island_Data", "StreamingAssets", "XML");
-        var destination = Path.Combine(destinationDirectory, "none.bat");
-
-        Directory.CreateDirectory(destinationDirectory);
-        log("复制 UnityPlayer.dll 到 XML\\none.bat。");
-        File.Copy(source, destination, overwrite: true);
-        log($"已写入旧解码文件：{destination}");
+        var sharedAssetsPath = EnsureSharedAssetsFile(gameDataDirectory, backupFiles, backups);
+        PatchMosaicShaderInAssetsFile(sharedAssetsPath, preferredPathId, backupFiles, backups);
     }
 
-    private void PatchMosaicShaderInBundle(string bundlePath, long? preferredPathId)
+    private string EnsureSharedAssetsFile(string gameDataDirectory, bool backupFiles, List<string> backups)
     {
-        EnsureUnityFsFile(bundlePath, "data.unity3d 不是 UnityFS bundle。");
-        log("读取 data.unity3d。");
+        var sharedAssetsPath = Path.Combine(gameDataDirectory, "sharedassets0.assets");
+        var bundlePath = Path.Combine(gameDataDirectory, "data.unity3d");
 
-        var temporaryFile = Path.Combine(Path.GetDirectoryName(bundlePath)!, "tmp", $"data.unity3d.{DateTime.Now:yyyyMMddHHmmss}.tmp");
+        if (File.Exists(bundlePath))
+        {
+            EnsureUnityFsFile(bundlePath, "data.unity3d 不是 UnityFS bundle。");
+            if (backupFiles)
+            {
+                backups.Add(CreateBackup(bundlePath));
+            }
+
+            ExtractBundleToGameData(bundlePath, gameDataDirectory);
+
+            if (!File.Exists(sharedAssetsPath))
+            {
+                throw new InvalidOperationException("data.unity3d 已解包，但没有得到 sharedassets0.assets。");
+            }
+
+            File.Delete(bundlePath);
+            log("已删除原 data.unity3d，游戏将使用解包后的资源文件。");
+            return sharedAssetsPath;
+        }
+
+        if (File.Exists(sharedAssetsPath))
+        {
+            log("检测到 sharedassets0.assets，直接修改解包后的资源文件。");
+            return sharedAssetsPath;
+        }
+
+        throw new FileNotFoundException("没有找到 Mad Island_Data\\data.unity3d 或 sharedassets0.assets。", bundlePath);
+    }
+
+    private void ExtractBundleToGameData(string bundlePath, string gameDataDirectory)
+    {
+        var extractDirectory = Path.Combine(gameDataDirectory, "tmp", $"extract-{DateTime.Now:yyyyMMddHHmmss}");
+        Directory.CreateDirectory(extractDirectory);
+
+        log("读取并解包 data.unity3d。");
+        var manager = new AssetsManager();
+        using var inputStream = File.Open(bundlePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        var bundle = manager.LoadBundleFile(inputStream, bundlePath, unpackIfPacked: true);
+
+        try
+        {
+            var extractedCount = 0;
+            foreach (var entry in bundle.file.BlockAndDirInfo.DirectoryInfos)
+            {
+                if ((entry.Flags & 0x02) != 0)
+                {
+                    continue;
+                }
+
+                var destination = GetSafeChildPath(extractDirectory, entry.Name);
+                Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+
+                using var output = File.Open(destination, FileMode.Create, FileAccess.Write, FileShare.None);
+                var reader = bundle.file.DataReader;
+                reader.Position = entry.Offset;
+                CopyExactly(reader.BaseStream, output, entry.DecompressedSize);
+                extractedCount++;
+            }
+
+            log($"已解包 {extractedCount} 个资源文件到临时目录。");
+        }
+        finally
+        {
+            manager.UnloadAll(unloadClassData: true);
+        }
+
+        var copiedCount = 0;
+        foreach (var source in Directory.EnumerateFiles(extractDirectory, "*", SearchOption.AllDirectories))
+        {
+            var relativePath = Path.GetRelativePath(extractDirectory, source);
+            var destination = GetSafeChildPath(gameDataDirectory, relativePath);
+            Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+            File.Copy(source, destination, overwrite: true);
+            copiedCount++;
+        }
+
+        Directory.Delete(extractDirectory, recursive: true);
+        log($"已把 {copiedCount} 个资源文件放入 Mad Island_Data。");
+    }
+
+    private void PatchMosaicShaderInAssetsFile(string assetsPath, long? preferredPathId, bool backupFiles, List<string> backups)
+    {
+        log("读取 sharedassets0.assets。");
+
+        var manager = new AssetsManager();
+        var assetsFile = manager.LoadAssetsFile(assetsPath, loadDeps: false);
+        var temporaryFile = Path.Combine(Path.GetDirectoryName(assetsPath)!, "tmp", $"sharedassets0.assets.{DateTime.Now:yyyyMMddHHmmss}.tmp");
         Directory.CreateDirectory(Path.GetDirectoryName(temporaryFile)!);
 
-        using var inputStream = File.Open(bundlePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-        var manager = new AssetsManager();
-        var bundle = manager.LoadBundleFile(inputStream, bundlePath, unpackIfPacked: true);
-        var assetsFile = manager.LoadAssetsFileFromBundle(bundle, "sharedassets0.assets", loadDeps: false);
-
-        var target = FindMosaicShader(assetsFile, preferredPathId);
-        var originalData = ReadAssetBytes(assetsFile, target);
-        var patchedData = PatchBlockSize(originalData);
-
-        if (originalData.AsSpan().SequenceEqual(patchedData))
+        try
         {
-            log("马赛克参数已经是 0，跳过 bundle 写入。");
-            return;
+            var target = FindMosaicShader(assetsFile, preferredPathId);
+            var originalData = ReadAssetBytes(assetsFile, target);
+            var patchedData = PatchBlockSize(originalData);
+
+            if (originalData.AsSpan().SequenceEqual(patchedData))
+            {
+                log("马赛克参数已经是 0，跳过写入。");
+                return;
+            }
+
+            if (backupFiles)
+            {
+                backups.Add(CreateBackup(assetsPath));
+            }
+
+            var assetReplacers = new List<AssetsReplacer>
+            {
+                new AssetsReplacerFromMemory(
+                    target.PathId,
+                    target.GetTypeId(assetsFile.file),
+                    assetsFile.file.GetScriptIndex(target),
+                    patchedData)
+            };
+
+            log("写入补丁后的 sharedassets0.assets 到临时目录。");
+            using (var outputStream = File.Open(temporaryFile, FileMode.Create, FileAccess.ReadWrite, FileShare.None))
+            using (var writer = new AssetsFileWriter(outputStream))
+            {
+                assetsFile.file.Write(writer, 0, assetReplacers, typeMeta: null);
+            }
+        }
+        finally
+        {
+            manager.UnloadAll(unloadClassData: true);
         }
 
-        var assetReplacers = new List<AssetsReplacer>
-        {
-            new AssetsReplacerFromMemory(
-                target.PathId,
-                target.TypeId,
-                target.ScriptTypeIndex,
-                patchedData)
-        };
-
-        var bundleReplacers = new List<BundleReplacer>
-        {
-            new BundleReplacerFromAssets(
-                "sharedassets0.assets",
-                "sharedassets0.assets",
-                assetsFile.file,
-                assetReplacers,
-                bundle.file.GetFileIndex("sharedassets0.assets"),
-                typeMeta: null)
-        };
-
-        log("写入补丁后的 data.unity3d 到临时目录。");
-        using (var outputStream = File.Open(temporaryFile, FileMode.Create, FileAccess.ReadWrite, FileShare.None))
-        using (var writer = new AssetsFileWriter(outputStream))
-        {
-            bundle.file.Write(writer, bundleReplacers, typeMeta: null);
-        }
-
-        manager.UnloadAll(unloadClassData: true);
-        inputStream.Close();
-
-        log("替换原 data.unity3d。");
-        File.Copy(temporaryFile, bundlePath, overwrite: true);
+        log("替换原 sharedassets0.assets。");
+        File.Copy(temporaryFile, assetsPath, overwrite: true);
         File.Delete(temporaryFile);
         log("马赛克 Shader 参数已修改为 0。");
     }
@@ -217,6 +276,11 @@ internal sealed class MadIslandPatcher
 
         foreach (var info in candidates)
         {
+            if (info.PathId <= 0)
+            {
+                continue;
+            }
+
             var data = ReadAssetBytes(assetsFile, info);
             if (LooksLikeMosaicShader(data))
             {
@@ -227,6 +291,44 @@ internal sealed class MadIslandPatcher
         }
 
         throw new InvalidOperationException("没有在 sharedassets0.assets 中找到 Ist/MosaicField Shader。游戏版本可能已经变化。");
+    }
+
+    private static string GetSafeChildPath(string baseDirectory, string relativePath)
+    {
+        var root = Path.GetFullPath(baseDirectory);
+        var combined = Path.GetFullPath(Path.Combine(root, relativePath));
+        var rootWithSeparator = Path.EndsInDirectorySeparator(root) ? root : root + Path.DirectorySeparatorChar;
+
+        if (!combined.StartsWith(rootWithSeparator, StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(combined, root, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException($"资源路径越界：{relativePath}");
+        }
+
+        return combined;
+    }
+
+    private static void CopyExactly(Stream source, Stream destination, long length)
+    {
+        if (length < 0)
+        {
+            throw new InvalidOperationException("资源文件大小无效。");
+        }
+
+        var buffer = new byte[81920];
+        var remaining = length;
+        while (remaining > 0)
+        {
+            var readLength = (int)Math.Min(buffer.Length, remaining);
+            var read = source.Read(buffer, 0, readLength);
+            if (read == 0)
+            {
+                throw new EndOfStreamException("读取 bundle 资源时提前到达文件末尾。");
+            }
+
+            destination.Write(buffer, 0, read);
+            remaining -= read;
+        }
     }
 
     private static bool LooksLikeMosaicShader(byte[] data)
@@ -329,7 +431,7 @@ internal sealed class MadIslandPatcher
         Directory.CreateDirectory(backupDirectory);
 
         var backup = Path.Combine(backupDirectory, $"{Path.GetFileName(filePath)}.{DateTime.Now:yyyyMMddHHmmss}.bak");
-        log($"备份 data.unity3d：{backup}");
+        log($"备份 {Path.GetFileName(filePath)}：{backup}");
         File.Copy(filePath, backup, overwrite: false);
         return backup;
     }

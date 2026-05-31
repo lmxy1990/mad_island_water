@@ -58,7 +58,6 @@ public partial class Form1 : Form
                 dlcPathTextBox.Text.Trim(),
                 installDlcCheckBox.Checked,
                 patchMosaicCheckBox.Checked,
-                legacyDecodeCheckBox.Checked,
                 backupCheckBox.Checked,
                 ParsePathId());
 
@@ -66,9 +65,9 @@ public partial class Form1 : Form
             AppendLog("");
             AppendLog("处理完成。");
 
-            if (result.BackupFile is not null)
+            foreach (var backupFile in result.BackupFiles)
             {
-                AppendLog($"备份文件：{result.BackupFile}");
+                AppendLog($"备份文件：{backupFile}");
             }
 
             SetStatus("完成");

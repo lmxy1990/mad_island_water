@@ -34,7 +34,6 @@ partial class Form1
         browseDlcButton = new Button();
         installDlcCheckBox = new CheckBox();
         patchMosaicCheckBox = new CheckBox();
-        legacyDecodeCheckBox = new CheckBox();
         backupCheckBox = new CheckBox();
         pathIdTextBox = new TextBox();
         pathIdLabel = new Label();
@@ -108,27 +107,15 @@ partial class Form1
         patchMosaicCheckBox.Text = "去除马赛克";
         patchMosaicCheckBox.UseVisualStyleBackColor = true;
         // 
-        // legacyDecodeCheckBox
-        // 
-        legacyDecodeCheckBox.AutoSize = true;
-        legacyDecodeCheckBox.Checked = true;
-        legacyDecodeCheckBox.CheckState = CheckState.Checked;
-        legacyDecodeCheckBox.Location = new Point(372, 180);
-        legacyDecodeCheckBox.Name = "legacyDecodeCheckBox";
-        legacyDecodeCheckBox.Size = new Size(144, 28);
-        legacyDecodeCheckBox.TabIndex = 8;
-        legacyDecodeCheckBox.Text = "应用老解码";
-        legacyDecodeCheckBox.UseVisualStyleBackColor = true;
-        // 
         // backupCheckBox
         // 
         backupCheckBox.AutoSize = true;
         backupCheckBox.Checked = true;
         backupCheckBox.CheckState = CheckState.Checked;
-        backupCheckBox.Location = new Point(546, 180);
+        backupCheckBox.Location = new Point(372, 180);
         backupCheckBox.Name = "backupCheckBox";
         backupCheckBox.Size = new Size(162, 28);
-        backupCheckBox.TabIndex = 9;
+        backupCheckBox.TabIndex = 8;
         backupCheckBox.Text = "修改前自动备份";
         backupCheckBox.UseVisualStyleBackColor = true;
         // 
@@ -156,7 +143,7 @@ partial class Form1
         pathIdHintLabel.Name = "pathIdHintLabel";
         pathIdHintLabel.Size = new Size(564, 24);
         pathIdHintLabel.TabIndex = 12;
-        pathIdHintLabel.Text = "新版默认 1964；留空会自动扫描。";
+        pathIdHintLabel.Text = "当前默认 1603；留空会自动扫描。";
         // 
         // runButton
         // 
@@ -220,7 +207,6 @@ partial class Form1
         Controls.Add(statusLabel);
         Controls.Add(runButton);
         Controls.Add(backupCheckBox);
-        Controls.Add(legacyDecodeCheckBox);
         Controls.Add(patchMosaicCheckBox);
         Controls.Add(installDlcCheckBox);
         Controls.Add(browseDlcButton);
@@ -243,7 +229,6 @@ partial class Form1
     private Button browseDlcButton;
     private CheckBox installDlcCheckBox;
     private CheckBox patchMosaicCheckBox;
-    private CheckBox legacyDecodeCheckBox;
     private CheckBox backupCheckBox;
     private TextBox pathIdTextBox;
     private Label pathIdLabel;
