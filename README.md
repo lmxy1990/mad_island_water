@@ -1,55 +1,70 @@
 # MadIslandWater
 
-MadIslandWater is a small .NET 10 Windows utility for applying the Mad Island official DLC file and patching the mosaic shader value in `data.unity3d`.
+MadIslandWater 是一个基于 .NET 10 的 Windows 小工具，用来安装 Mad Island 官方 DLC，并把 `data.unity3d` 里的马赛克 Shader 参数改为 0。
 
-## Features
+## 功能
 
-- Select the Mad Island game directory.
-- Copy the official DLC file to `Mad Island_Data\StreamingAssets\DLC\dlc_00`.
-- Patch `sharedassets0.assets` inside `data.unity3d`.
-- Default mosaic shader PathID is `1964`; leave it empty to scan automatically.
-- Apply the legacy decode workaround by copying `UnityPlayer.dll` to `Mad Island_Data\StreamingAssets\XML\none.bat`.
-- Create a timestamped backup under `Mad Island_Data\tmp\backup` before patching.
+- 选择 Mad Island 游戏目录。
+- 自动安装官方 DLC 到 `Mad Island_Data\StreamingAssets\DLC\dlc_00`。
+- 修改 `data.unity3d` 内的 `sharedassets0.assets`。
+- 默认马赛克 Shader PathID 为 `1964`；留空可自动扫描。
+- 应用旧解码补丁：把 `UnityPlayer.dll` 复制到 `Mad Island_Data\StreamingAssets\XML\none.bat`。
+- 修改前会在 `Mad Island_Data\tmp\backup` 创建带时间戳的备份。
 
 ## DLC
 
-The official DLC file is tracked at `dlc\dlc_00.zip` through Git LFS. Keep it as-is. Even though the file is named `dlc_00.zip`, it is a UnityFS file and should not be extracted.
+官方 DLC 文件已通过 Git LFS 放在仓库的 `dlc\dlc_00.zip`。
 
-The app auto-detects `dlc\dlc_00.zip` when launched from this repository or a published folder containing a `dlc` directory. You can still select another DLC file manually if needed. The tool copies it to the game as `dlc_00`.
+注意：这个文件虽然叫 `dlc_00.zip`，但它不是普通压缩包，不需要解压，也不要改内容。程序会把它复制到游戏目录，并命名为 `dlc_00`。
 
-## Docs
+程序从仓库目录或带有 `dlc` 子目录的发布目录启动时，会自动找到 `dlc\dlc_00.zip`。如果你想使用其它 DLC 文件，也可以在界面里手动选择。
+
+## 使用
+
+1. 启动 `MadIslandWater.exe`。
+2. 选择游戏目录，例如：
+
+```text
+D:\Program Files (x86)\Steam\steamapps\common\Mad Island
+```
+
+3. 确认 DLC 文件路径，默认会使用仓库里的 `dlc\dlc_00.zip`。
+4. PathID 默认使用 `1964`，一般不需要修改。
+5. 点击执行，等待完成。
+
+## 文档
 
 - [Mad Island NPC Workshop 中文图文教程](docs/npc-workshop-guide.md)
 
-## Build
+## 构建
 
 ```powershell
 dotnet build .\MadIslandWater\MadIslandWater.csproj -c Release
 ```
 
-The project references `third_party\AssetsTools.NET\AssetsTools.NET.dll`, which is included because the local patching code depends on this specific API shape.
+项目引用了 `third_party\AssetsTools.NET\AssetsTools.NET.dll`。该依赖已放入仓库，因为当前补丁逻辑依赖这个版本的 API。
 
-## Publish
+## 发布
 
 ```powershell
 dotnet publish .\MadIslandWater\MadIslandWater.csproj -c Release -r win-x64 --self-contained false -o .\publish\MadIslandWater
 ```
 
-The published app requires the .NET 10 Windows Desktop Runtime.
+发布后的程序需要安装 .NET 10 Windows Desktop Runtime。
 
-## CLI
+## 命令行模式
 
-The executable also has a hidden CLI mode:
+程序也提供隐藏的命令行模式：
 
 ```powershell
 MadIslandWater.exe --cli --game "D:\Program Files (x86)\Steam\steamapps\common\Mad Island" --dlc "D:\Downloads\dlc_00.zip"
 ```
 
-Useful options:
+可用参数：
 
-- `--pathid 1964`: use a specific shader PathID.
-- `--scan`: skip the preferred PathID and scan shaders automatically.
-- `--no-dlc`: do not install DLC.
-- `--no-mosaic`: do not patch the mosaic shader.
-- `--no-legacy`: do not apply the legacy decode workaround.
-- `--no-backup`: do not create a `data.unity3d` backup.
+- `--pathid 1964`：使用指定 Shader PathID。
+- `--scan`：跳过默认 PathID，自动扫描 Shader。
+- `--no-dlc`：不安装 DLC。
+- `--no-mosaic`：不修改马赛克 Shader。
+- `--no-legacy`：不应用旧解码补丁。
+- `--no-backup`：不创建 `data.unity3d` 备份。
