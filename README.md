@@ -54,7 +54,7 @@ D:\Program Files (x86)\Steam\steamapps\common\Mad Island
 .\scripts\publish.ps1
 ```
 
-默认发布到 `publish\MadIslandWater`，并会把 `dlc\dlc_00.zip` 一起复制到发布目录。发布后的程序需要安装 .NET 10 Windows Desktop Runtime。
+默认发布到 `dist`，并会把 `dlc\dlc_00.zip` 一起复制到发布目录。发布后的程序需要安装 .NET 10 Windows Desktop Runtime。
 
 ## 命令行模式
 

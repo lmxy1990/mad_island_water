@@ -14,7 +14,7 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 $project = Join-Path $repoRoot "MadIslandWater\MadIslandWater.csproj"
 
 if ([string]::IsNullOrWhiteSpace($Output)) {
-    $Output = Join-Path $repoRoot "publish\MadIslandWater"
+    $Output = Join-Path $repoRoot "dist"
 }
 
 dotnet publish $project `

@@ -5,6 +5,7 @@ obj/
 *.suo
 
 publish/
+dist/
 release/
 artifacts/
 work-test/
