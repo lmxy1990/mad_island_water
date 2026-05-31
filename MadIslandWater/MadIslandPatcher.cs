@@ -38,7 +38,7 @@ internal sealed class MadIslandPatcher
 
         if (options.ApplyMosaicPatch)
         {
-            PatchMosaicShader(gameDataDirectory, options.MosaicShaderPathId, options.BackupFiles, backupFiles);
+            PatchMosaicShader(gameDataDirectory, options.MosaicShaderPathId, options.BackupFiles, options.MosaicPatchMode, backupFiles);
             mosaicPatched = true;
         }
 
@@ -59,6 +59,14 @@ internal sealed class MadIslandPatcher
         if (File.Exists(dataBundlePath))
         {
             EnsureUnityFsFile(dataBundlePath, "data.unity3d 不是 UnityFS bundle。");
+            var dataBundleBackup = FindLatestBackup(gameDataDirectory, "data.unity3d");
+            if (dataBundleBackup is not null && IsMosaicPatchAppliedInBundle(dataBundlePath))
+            {
+                log($"找到 data.unity3d 备份：{dataBundleBackup.FullName}");
+                File.Copy(dataBundleBackup.FullName, dataBundlePath, overwrite: true);
+                log($"已从备份恢复 data.unity3d：{dataBundlePath}");
+            }
+
             log("data.unity3d 已存在，执行解包资源清理。");
             var currentBundleEntries = ReadBundleEntryPaths(dataBundlePath, gameDataDirectory);
             var cleanupResult = RemoveExtractedFiles(gameDataDirectory, currentBundleEntries);
@@ -143,10 +151,155 @@ internal sealed class MadIslandPatcher
         log($"已安装 DLC 到：{destination}");
     }
 
-    private void PatchMosaicShader(string gameDataDirectory, long? preferredPathId, bool backupFiles, List<string> backups)
+    private void PatchMosaicShader(
+        string gameDataDirectory,
+        long? preferredPathId,
+        bool backupFiles,
+        MosaicPatchMode patchMode,
+        List<string> backups)
     {
-        var sharedAssetsPath = EnsureSharedAssetsFile(gameDataDirectory, backupFiles, backups);
-        PatchMosaicShaderInAssetsFile(sharedAssetsPath, preferredPathId, backupFiles, backups);
+        switch (patchMode)
+        {
+            case MosaicPatchMode.ExtractToGameDirectory:
+                var sharedAssetsPath = EnsureSharedAssetsFile(gameDataDirectory, backupFiles, backups);
+                PatchMosaicShaderInAssetsFile(sharedAssetsPath, preferredPathId, backupFiles, backups);
+                break;
+            case MosaicPatchMode.DirectBundle:
+                PatchMosaicShaderDirectlyInBundle(gameDataDirectory, preferredPathId, backupFiles, backups);
+                break;
+            default:
+                throw new InvalidOperationException($"未知补丁方式：{patchMode}");
+        }
+    }
+
+    private void PatchMosaicShaderDirectlyInBundle(string gameDataDirectory, long? preferredPathId, bool backupFiles, List<string> backups)
+    {
+        var bundlePath = Path.Combine(gameDataDirectory, "data.unity3d");
+        if (!File.Exists(bundlePath))
+        {
+            throw new FileNotFoundException("直接替换方式需要原始 Mad Island_Data\\data.unity3d。当前目录可能已经是解包方式，请先还原。", bundlePath);
+        }
+
+        EnsureUnityFsFile(bundlePath, "data.unity3d 不是 UnityFS bundle。");
+        log("直接读取 data.unity3d 中的 sharedassets0.assets。");
+        var manager = new AssetsManager();
+        var temporaryDirectory = Path.Combine(gameDataDirectory, "tmp");
+        var temporaryFile = Path.Combine(temporaryDirectory, $"data.unity3d.{DateTime.Now:yyyyMMddHHmmss}.tmp");
+        Directory.CreateDirectory(temporaryDirectory);
+        var wroteTemporaryFile = false;
+
+        using var inputStream = File.Open(bundlePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        var bundle = manager.LoadBundleFile(inputStream, bundlePath, unpackIfPacked: true);
+
+        try
+        {
+            const string sharedAssetsFileName = "sharedassets0.assets";
+            var sharedAssetsIndex = bundle.file.GetFileIndex(sharedAssetsFileName);
+            if (sharedAssetsIndex < 0)
+            {
+                throw new InvalidOperationException("data.unity3d 中没有找到 sharedassets0.assets。");
+            }
+
+            var assetsFile = manager.LoadAssetsFileFromBundle(bundle, sharedAssetsFileName, loadDeps: false);
+            var target = FindMosaicShader(assetsFile, preferredPathId);
+            var originalData = ReadAssetBytes(assetsFile, target);
+            var patchedData = PatchBlockSize(originalData);
+
+            if (originalData.AsSpan().SequenceEqual(patchedData))
+            {
+                log("马赛克参数已经是 0，跳过写入。");
+                return;
+            }
+
+            var assetReplacers = new List<AssetsReplacer>
+            {
+                new AssetsReplacerFromMemory(
+                    target.PathId,
+                    target.GetTypeId(assetsFile.file),
+                    assetsFile.file.GetScriptIndex(target),
+                    patchedData)
+            };
+
+            var bundleReplacers = new List<BundleReplacer>
+            {
+                new BundleReplacerFromAssets(
+                    sharedAssetsFileName,
+                    sharedAssetsFileName,
+                    assetsFile.file,
+                    assetReplacers,
+                    sharedAssetsIndex,
+                    null)
+            };
+
+            log("写入补丁后的 data.unity3d 到临时目录。");
+            using (var outputStream = File.Open(temporaryFile, FileMode.Create, FileAccess.ReadWrite, FileShare.None))
+            using (var writer = new AssetsFileWriter(outputStream))
+            {
+                bundle.file.Write(writer, bundleReplacers, typeMeta: null);
+            }
+
+            wroteTemporaryFile = true;
+        }
+        finally
+        {
+            manager.UnloadAll(unloadClassData: true);
+        }
+
+        inputStream.Close();
+
+        if (wroteTemporaryFile)
+        {
+            try
+            {
+                ValidatePatchedBundle(temporaryFile, preferredPathId);
+
+                if (backupFiles)
+                {
+                    backups.Add(CreateBackup(bundlePath));
+                }
+
+                log("替换原 data.unity3d。");
+                File.Copy(temporaryFile, bundlePath, overwrite: true);
+                File.Delete(temporaryFile);
+                DeleteDirectoryIfEmpty(Path.GetDirectoryName(temporaryFile)!);
+                log("马赛克 Shader 参数已直接写入 data.unity3d。");
+            }
+            catch
+            {
+                if (File.Exists(temporaryFile))
+                {
+                    File.Delete(temporaryFile);
+                }
+
+                DeleteDirectoryIfEmpty(Path.GetDirectoryName(temporaryFile)!);
+                throw;
+            }
+        }
+    }
+
+    private void ValidatePatchedBundle(string bundlePath, long? preferredPathId)
+    {
+        EnsureUnityFsFile(bundlePath, "写出的 data.unity3d 不是 UnityFS bundle。");
+        var manager = new AssetsManager();
+        using var inputStream = File.Open(bundlePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        var bundle = manager.LoadBundleFile(inputStream, bundlePath, unpackIfPacked: true);
+
+        try
+        {
+            var assetsFile = manager.LoadAssetsFileFromBundle(bundle, "sharedassets0.assets", loadDeps: false);
+            var target = FindMosaicShader(assetsFile, preferredPathId ?? CurrentMosaicShaderPathId);
+            var data = ReadAssetBytes(assetsFile, target);
+            if (!IsBlockSizePatched(data))
+            {
+                throw new InvalidOperationException("写出的 data.unity3d 未通过补丁验证。");
+            }
+
+            log("已验证临时 data.unity3d 可读取，且马赛克参数为 0。");
+        }
+        finally
+        {
+            manager.UnloadAll(unloadClassData: true);
+        }
     }
 
     private string EnsureSharedAssetsFile(string gameDataDirectory, bool backupFiles, List<string> backups)
@@ -271,6 +424,21 @@ internal sealed class MadIslandPatcher
         }
 
         return candidates[0];
+    }
+
+    private static FileInfo? FindLatestBackup(string gameDataDirectory, string fileName)
+    {
+        var backupDirectory = Path.Combine(gameDataDirectory, "tmp", "backup");
+        if (!Directory.Exists(backupDirectory))
+        {
+            return null;
+        }
+
+        return new DirectoryInfo(backupDirectory)
+            .EnumerateFiles($"{fileName}.*.bak", SearchOption.TopDirectoryOnly)
+            .OrderByDescending(file => file.LastWriteTimeUtc)
+            .ThenByDescending(file => file.Name, StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault();
     }
 
     private static List<string> ReadBundleEntryPaths(string bundlePath, string gameDataDirectory)
@@ -544,6 +712,49 @@ internal sealed class MadIslandPatcher
 
         var searchArea = data.AsSpan(searchStart, searchLength);
         return IndexOf(searchArea, Float15) >= 0 || HasLikelyPatchedBlockSize(searchArea);
+    }
+
+    private bool IsMosaicPatchAppliedInBundle(string bundlePath)
+    {
+        var manager = new AssetsManager();
+        using var inputStream = File.Open(bundlePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        var bundle = manager.LoadBundleFile(inputStream, bundlePath, unpackIfPacked: true);
+
+        try
+        {
+            var assetsFile = manager.LoadAssetsFileFromBundle(bundle, "sharedassets0.assets", loadDeps: false);
+            var target = FindMosaicShader(assetsFile, CurrentMosaicShaderPathId);
+            var data = ReadAssetBytes(assetsFile, target);
+            return IsBlockSizePatched(data);
+        }
+        catch (Exception ex) when (ex is IOException or InvalidOperationException)
+        {
+            log($"检查 data.unity3d 当前补丁状态失败，跳过备份恢复：{ex.Message}");
+            return false;
+        }
+        finally
+        {
+            manager.UnloadAll(unloadClassData: true);
+        }
+    }
+
+    private static bool IsBlockSizePatched(byte[] data)
+    {
+        var blockNameOffset = IndexOf(data, BlockSizeName);
+        if (blockNameOffset < 0)
+        {
+            return false;
+        }
+
+        var searchStart = blockNameOffset + BlockSizeName.Length;
+        var searchLength = Math.Min(128, data.Length - searchStart);
+        if (searchLength <= 0)
+        {
+            return false;
+        }
+
+        var searchArea = data.AsSpan(searchStart, searchLength);
+        return IndexOf(searchArea, Float15) < 0 && HasLikelyPatchedBlockSize(searchArea);
     }
 
     private static byte[] ReadAssetBytes(AssetsFileInstance assetsFile, AssetFileInfo info)

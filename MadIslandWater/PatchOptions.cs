@@ -6,4 +6,5 @@ internal sealed record PatchOptions(
     bool InstallDlc,
     bool ApplyMosaicPatch,
     bool BackupFiles,
-    long? MosaicShaderPathId);
+    long? MosaicShaderPathId,
+    MosaicPatchMode MosaicPatchMode);

@@ -47,13 +47,15 @@ static class Program
             var pathId = args.Contains("--scan", StringComparer.OrdinalIgnoreCase)
                 ? null
                 : ParsePathId(GetOption(args, "--pathid"));
+            var mosaicPatchMode = ParseMosaicPatchMode(args);
             var options = new PatchOptions(
                 gameDirectory,
                 dlcFile,
                 InstallDlc: !args.Contains("--no-dlc", StringComparer.OrdinalIgnoreCase),
                 ApplyMosaicPatch: !args.Contains("--no-mosaic", StringComparer.OrdinalIgnoreCase),
                 BackupFiles: !args.Contains("--no-backup", StringComparer.OrdinalIgnoreCase),
-                MosaicShaderPathId: pathId);
+                MosaicShaderPathId: pathId,
+                MosaicPatchMode: mosaicPatchMode);
 
             var result = patcher.Apply(options);
             Console.WriteLine("处理完成。");
@@ -99,5 +101,26 @@ static class Program
         }
 
         throw new InvalidOperationException("--pathid 必须是正整数。");
+    }
+
+    private static MosaicPatchMode ParseMosaicPatchMode(string[] args)
+    {
+        if (args.Contains("--direct", StringComparer.OrdinalIgnoreCase))
+        {
+            return MosaicPatchMode.DirectBundle;
+        }
+
+        var value = GetOption(args, "--patch-mode");
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return MosaicPatchMode.ExtractToGameDirectory;
+        }
+
+        return value.ToLowerInvariant() switch
+        {
+            "extract" or "unpack" or "解包" => MosaicPatchMode.ExtractToGameDirectory,
+            "direct" or "bundle" or "直接" => MosaicPatchMode.DirectBundle,
+            _ => throw new InvalidOperationException("--patch-mode 只支持 extract 或 direct。")
+        };
     }
 }

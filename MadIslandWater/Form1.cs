@@ -12,7 +12,7 @@ public partial class Form1 : Form
         gamePathTextBox.Text = @"D:\Program Files (x86)\Steam\steamapps\common\Mad Island";
         dlcPathTextBox.Text = FindDefaultDlcPath();
         pathIdTextBox.Text = MadIslandPatcher.CurrentMosaicShaderPathId.ToString();
-        UpdateOperationModeUi();
+        UpdatePatchOptionsUi();
     }
 
     private void browseGameButton_Click(object sender, EventArgs e)
@@ -49,30 +49,50 @@ public partial class Form1 : Form
     private async void runButton_Click(object sender, EventArgs e)
     {
         SetActionsEnabled(false);
-        SetStatus(restoreRadioButton.Checked ? "还原中..." : "处理中...");
+        SetStatus("处理中...");
         logTextBox.Clear();
 
         try
         {
-            if (restoreRadioButton.Checked)
-            {
-                if (!await RestoreResourcesAsync())
-                {
-                    return;
-                }
-            }
-            else
-            {
-                await ApplyPatchAsync();
-            }
+            await ApplyPatchAsync();
 
             SetStatus("完成");
-            MessageBox.Show(this, restoreRadioButton.Checked ? "还原完成。" : "处理完成。", Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show(this, "处理完成。", Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
         catch (Exception ex)
         {
             AppendLog("");
-            AppendLog(restoreRadioButton.Checked ? "还原失败：" : "处理失败：");
+            AppendLog("处理失败：");
+            AppendLog(ex.Message);
+            SetStatus("失败");
+            MessageBox.Show(this, ex.Message, Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+        finally
+        {
+            SetActionsEnabled(true);
+        }
+    }
+
+    private async void restoreButton_Click(object sender, EventArgs e)
+    {
+        SetActionsEnabled(false);
+        SetStatus("还原中...");
+        logTextBox.Clear();
+
+        try
+        {
+            if (!await RestoreResourcesAsync())
+            {
+                return;
+            }
+
+            SetStatus("完成");
+            MessageBox.Show(this, "还原完成。", Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+        catch (Exception ex)
+        {
+            AppendLog("");
+            AppendLog("还原失败：");
             AppendLog(ex.Message);
             SetStatus("失败");
             MessageBox.Show(this, ex.Message, Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -96,7 +116,8 @@ public partial class Form1 : Form
             installDlcCheckBox.Checked,
             patchMosaicCheckBox.Checked,
             backupCheckBox.Checked,
-            ParsePathId());
+            ParsePathId(),
+            GetSelectedMosaicPatchMode());
 
         var result = await Task.Run(() => patcher.Apply(options));
         AppendLog("");
@@ -112,7 +133,7 @@ public partial class Form1 : Form
     {
         var confirm = MessageBox.Show(
             this,
-            "将恢复原 data.unity3d，并删除解包出来的资源文件。DLC 文件不会删除。是否继续？",
+            "将恢复原 data.unity3d；如果使用过解包方式，会删除解包出来的资源文件。DLC 文件不会删除。是否继续？",
             Text,
             MessageBoxButtons.YesNo,
             MessageBoxIcon.Warning,
@@ -131,14 +152,14 @@ public partial class Form1 : Form
         return true;
     }
 
-    private void operationModeRadioButton_CheckedChanged(object sender, EventArgs e)
+    private void patchMethodRadioButton_CheckedChanged(object sender, EventArgs e)
     {
-        UpdateOperationModeUi();
+        UpdatePatchOptionsUi();
     }
 
     private void patchOptionCheckBox_CheckedChanged(object sender, EventArgs e)
     {
-        UpdateOperationModeUi();
+        UpdatePatchOptionsUi();
     }
 
     private void AppendLog(string message)
@@ -166,24 +187,30 @@ public partial class Form1 : Form
     private void SetActionsEnabled(bool enabled)
     {
         runButton.Enabled = enabled;
-        applyPatchRadioButton.Enabled = enabled;
-        restoreRadioButton.Enabled = enabled;
-        UpdateOperationModeUi(enabled);
+        restoreButton.Enabled = enabled;
+        UpdatePatchOptionsUi(enabled);
     }
 
-    private void UpdateOperationModeUi(bool actionsEnabled = true)
+    private void UpdatePatchOptionsUi(bool actionsEnabled = true)
     {
-        var patchMode = applyPatchRadioButton.Checked;
+        dlcPathTextBox.Enabled = actionsEnabled && installDlcCheckBox.Checked;
+        browseDlcButton.Enabled = actionsEnabled && installDlcCheckBox.Checked;
+        installDlcCheckBox.Enabled = actionsEnabled;
+        patchMosaicCheckBox.Enabled = actionsEnabled;
+        backupCheckBox.Enabled = actionsEnabled && patchMosaicCheckBox.Checked;
+        pathIdTextBox.Enabled = actionsEnabled && patchMosaicCheckBox.Checked;
+        pathIdLabel.Enabled = actionsEnabled && patchMosaicCheckBox.Checked;
+        pathIdHintLabel.Enabled = actionsEnabled && patchMosaicCheckBox.Checked;
+        patchMethodLabel.Enabled = actionsEnabled && patchMosaicCheckBox.Checked;
+        extractPatchRadioButton.Enabled = actionsEnabled && patchMosaicCheckBox.Checked;
+        directPatchRadioButton.Enabled = actionsEnabled && patchMosaicCheckBox.Checked;
+    }
 
-        dlcPathTextBox.Enabled = actionsEnabled && patchMode && installDlcCheckBox.Checked;
-        browseDlcButton.Enabled = actionsEnabled && patchMode && installDlcCheckBox.Checked;
-        installDlcCheckBox.Enabled = actionsEnabled && patchMode;
-        patchMosaicCheckBox.Enabled = actionsEnabled && patchMode;
-        backupCheckBox.Enabled = actionsEnabled && patchMode && patchMosaicCheckBox.Checked;
-        pathIdTextBox.Enabled = actionsEnabled && patchMode && patchMosaicCheckBox.Checked;
-        pathIdLabel.Enabled = actionsEnabled && patchMode && patchMosaicCheckBox.Checked;
-        pathIdHintLabel.Enabled = actionsEnabled && patchMode && patchMosaicCheckBox.Checked;
-        runButton.Text = patchMode ? "开始处理" : "开始还原";
+    private MosaicPatchMode GetSelectedMosaicPatchMode()
+    {
+        return directPatchRadioButton.Checked
+            ? MosaicPatchMode.DirectBundle
+            : MosaicPatchMode.ExtractToGameDirectory;
     }
 
     private long? ParsePathId()
