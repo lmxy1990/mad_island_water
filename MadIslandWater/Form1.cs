@@ -7,6 +7,7 @@ public partial class Form1 : Form
     public Form1()
     {
         InitializeComponent();
+        Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath) ?? Icon;
         patcher = new MadIslandPatcher(AppendLog);
         gamePathTextBox.Text = @"D:\Program Files (x86)\Steam\steamapps\common\Mad Island";
         dlcPathTextBox.Text = FindDefaultDlcPath();

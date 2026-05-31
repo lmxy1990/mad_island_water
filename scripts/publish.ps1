@@ -23,6 +23,10 @@ dotnet publish $project `
     --self-contained:$($SelfContained.IsPresent.ToString().ToLowerInvariant()) `
     -o $Output
 
+if ($LASTEXITCODE -ne 0) {
+    exit $LASTEXITCODE
+}
+
 $sourceDlc = Join-Path $repoRoot "dlc"
 if (Test-Path -LiteralPath $sourceDlc) {
     $targetDlc = Join-Path $Output "dlc"
