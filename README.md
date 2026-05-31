@@ -13,7 +13,9 @@ MadIslandWater 是一个基于 .NET 10 的 Windows 小工具，用来安装 Mad 
 
 ## DLC
 
-官方 DLC 文件已通过 Git LFS 放在仓库的 `dlc\dlc_00.zip`。
+官方 DLC 文件放在仓库的 `dlc\dlc_00.zip`，这是当前默认使用的新版 DLC。
+
+旧版 DLC 保留在 `dlc\dlc_00_legacy.zip`，通过 Git LFS 管理，仅作为备用文件。
 
 注意：这个文件虽然叫 `dlc_00.zip`，但它不是普通压缩包，不需要解压，也不要改内容。程序会把它复制到游戏目录，并命名为 `dlc_00`。
 

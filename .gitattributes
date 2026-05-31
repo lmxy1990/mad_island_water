@@ -1,1 +1,1 @@
-dlc/dlc_00.zip filter=lfs diff=lfs merge=lfs -text
+dlc/dlc_00_legacy.zip filter=lfs diff=lfs merge=lfs -text

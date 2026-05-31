@@ -16,6 +16,7 @@ uabea-cli/
 *.zip
 !dlc/
 !dlc/dlc_00.zip
+!dlc/dlc_00_legacy.zip
 *.7z
 *.rar
 *.bak
