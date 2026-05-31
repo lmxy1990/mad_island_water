@@ -13,9 +13,9 @@ MadIslandWater is a small .NET 10 Windows utility for applying the Mad Island of
 
 ## DLC
 
-The official DLC file is not included in this repository or release assets. Download it from the official site and keep it as-is. Even if the downloaded file is named `dlc_00.zip`, it is a UnityFS file and should not be extracted.
+The official DLC file is tracked at `dlc\dlc_00.zip` through Git LFS. Keep it as-is. Even though the file is named `dlc_00.zip`, it is a UnityFS file and should not be extracted.
 
-In the app, select the downloaded file manually. The tool copies it to the game as `dlc_00`.
+The app auto-detects `dlc\dlc_00.zip` when launched from this repository or a published folder containing a `dlc` directory. You can still select another DLC file manually if needed. The tool copies it to the game as `dlc_00`.
 
 ## Docs
 

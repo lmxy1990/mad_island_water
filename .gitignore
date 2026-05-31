@@ -9,14 +9,14 @@ release/
 artifacts/
 work-test/
 
-dlc/
 AnimeStudio/
 uabea-cli/
 
 *.zip
+!dlc/
+!dlc/dlc_00.zip
 *.7z
 *.rar
 *.bak
 *.tmp
 *.decomp
-
