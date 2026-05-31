@@ -12,6 +12,7 @@ public partial class Form1 : Form
         gamePathTextBox.Text = @"D:\Program Files (x86)\Steam\steamapps\common\Mad Island";
         dlcPathTextBox.Text = FindDefaultDlcPath();
         pathIdTextBox.Text = MadIslandPatcher.CurrentMosaicShaderPathId.ToString();
+        UpdateOperationModeUi();
     }
 
     private void browseGameButton_Click(object sender, EventArgs e)
@@ -48,35 +49,30 @@ public partial class Form1 : Form
     private async void runButton_Click(object sender, EventArgs e)
     {
         SetActionsEnabled(false);
-        SetStatus("处理中...");
+        SetStatus(restoreRadioButton.Checked ? "还原中..." : "处理中...");
         logTextBox.Clear();
 
         try
         {
-            var options = new PatchOptions(
-                gamePathTextBox.Text.Trim(),
-                dlcPathTextBox.Text.Trim(),
-                installDlcCheckBox.Checked,
-                patchMosaicCheckBox.Checked,
-                backupCheckBox.Checked,
-                ParsePathId());
-
-            var result = await Task.Run(() => patcher.Apply(options));
-            AppendLog("");
-            AppendLog("处理完成。");
-
-            foreach (var backupFile in result.BackupFiles)
+            if (restoreRadioButton.Checked)
             {
-                AppendLog($"备份文件：{backupFile}");
+                if (!await RestoreResourcesAsync())
+                {
+                    return;
+                }
+            }
+            else
+            {
+                await ApplyPatchAsync();
             }
 
             SetStatus("完成");
-            MessageBox.Show(this, "处理完成。", Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show(this, restoreRadioButton.Checked ? "还原完成。" : "处理完成。", Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
         catch (Exception ex)
         {
             AppendLog("");
-            AppendLog("处理失败：");
+            AppendLog(restoreRadioButton.Checked ? "还原失败：" : "处理失败：");
             AppendLog(ex.Message);
             SetStatus("失败");
             MessageBox.Show(this, ex.Message, Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -87,7 +83,32 @@ public partial class Form1 : Form
         }
     }
 
-    private async void restoreButton_Click(object sender, EventArgs e)
+    private async Task ApplyPatchAsync()
+    {
+        if (!installDlcCheckBox.Checked && !patchMosaicCheckBox.Checked)
+        {
+            throw new InvalidOperationException("请至少选择安装 DLC 或去除马赛克。");
+        }
+
+        var options = new PatchOptions(
+            gamePathTextBox.Text.Trim(),
+            dlcPathTextBox.Text.Trim(),
+            installDlcCheckBox.Checked,
+            patchMosaicCheckBox.Checked,
+            backupCheckBox.Checked,
+            ParsePathId());
+
+        var result = await Task.Run(() => patcher.Apply(options));
+        AppendLog("");
+        AppendLog("处理完成。");
+
+        foreach (var backupFile in result.BackupFiles)
+        {
+            AppendLog($"备份文件：{backupFile}");
+        }
+    }
+
+    private async Task<bool> RestoreResourcesAsync()
     {
         var confirm = MessageBox.Show(
             this,
@@ -99,33 +120,25 @@ public partial class Form1 : Form
 
         if (confirm != DialogResult.Yes)
         {
-            return;
+            SetStatus("已取消");
+            AppendLog("已取消还原。");
+            return false;
         }
 
-        SetActionsEnabled(false);
-        SetStatus("还原中...");
-        logTextBox.Clear();
+        await Task.Run(() => patcher.Restore(gamePathTextBox.Text.Trim()));
+        AppendLog("");
+        AppendLog("还原完成。");
+        return true;
+    }
 
-        try
-        {
-            await Task.Run(() => patcher.Restore(gamePathTextBox.Text.Trim()));
-            AppendLog("");
-            AppendLog("还原完成。");
-            SetStatus("完成");
-            MessageBox.Show(this, "还原完成。", Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
-        }
-        catch (Exception ex)
-        {
-            AppendLog("");
-            AppendLog("还原失败：");
-            AppendLog(ex.Message);
-            SetStatus("失败");
-            MessageBox.Show(this, ex.Message, Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
-        }
-        finally
-        {
-            SetActionsEnabled(true);
-        }
+    private void operationModeRadioButton_CheckedChanged(object sender, EventArgs e)
+    {
+        UpdateOperationModeUi();
+    }
+
+    private void patchOptionCheckBox_CheckedChanged(object sender, EventArgs e)
+    {
+        UpdateOperationModeUi();
     }
 
     private void AppendLog(string message)
@@ -153,7 +166,24 @@ public partial class Form1 : Form
     private void SetActionsEnabled(bool enabled)
     {
         runButton.Enabled = enabled;
-        restoreButton.Enabled = enabled;
+        applyPatchRadioButton.Enabled = enabled;
+        restoreRadioButton.Enabled = enabled;
+        UpdateOperationModeUi(enabled);
+    }
+
+    private void UpdateOperationModeUi(bool actionsEnabled = true)
+    {
+        var patchMode = applyPatchRadioButton.Checked;
+
+        dlcPathTextBox.Enabled = actionsEnabled && patchMode && installDlcCheckBox.Checked;
+        browseDlcButton.Enabled = actionsEnabled && patchMode && installDlcCheckBox.Checked;
+        installDlcCheckBox.Enabled = actionsEnabled && patchMode;
+        patchMosaicCheckBox.Enabled = actionsEnabled && patchMode;
+        backupCheckBox.Enabled = actionsEnabled && patchMode && patchMosaicCheckBox.Checked;
+        pathIdTextBox.Enabled = actionsEnabled && patchMode && patchMosaicCheckBox.Checked;
+        pathIdLabel.Enabled = actionsEnabled && patchMode && patchMosaicCheckBox.Checked;
+        pathIdHintLabel.Enabled = actionsEnabled && patchMode && patchMosaicCheckBox.Checked;
+        runButton.Text = patchMode ? "开始处理" : "开始还原";
     }
 
     private long? ParsePathId()

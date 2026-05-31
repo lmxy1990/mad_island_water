@@ -32,6 +32,9 @@ partial class Form1
         browseGameButton = new Button();
         dlcPathTextBox = new TextBox();
         browseDlcButton = new Button();
+        operationModeLabel = new Label();
+        applyPatchRadioButton = new RadioButton();
+        restoreRadioButton = new RadioButton();
         installDlcCheckBox = new CheckBox();
         patchMosaicCheckBox = new CheckBox();
         backupCheckBox = new CheckBox();
@@ -39,7 +42,6 @@ partial class Form1
         pathIdLabel = new Label();
         pathIdHintLabel = new Label();
         runButton = new Button();
-        restoreButton = new Button();
         statusLabel = new Label();
         logTextBox = new TextBox();
         gamePathLabel = new Label();
@@ -84,108 +86,133 @@ partial class Form1
         browseDlcButton.UseVisualStyleBackColor = true;
         browseDlcButton.Click += browseDlcButton_Click;
         // 
+        // operationModeLabel
+        //
+        operationModeLabel.AutoSize = true;
+        operationModeLabel.Location = new Point(24, 180);
+        operationModeLabel.Name = "operationModeLabel";
+        operationModeLabel.Size = new Size(82, 24);
+        operationModeLabel.TabIndex = 6;
+        operationModeLabel.Text = "操作模式";
+        //
+        // applyPatchRadioButton
+        //
+        applyPatchRadioButton.AutoSize = true;
+        applyPatchRadioButton.Checked = true;
+        applyPatchRadioButton.Location = new Point(126, 178);
+        applyPatchRadioButton.Name = "applyPatchRadioButton";
+        applyPatchRadioButton.Size = new Size(107, 28);
+        applyPatchRadioButton.TabIndex = 7;
+        applyPatchRadioButton.TabStop = true;
+        applyPatchRadioButton.Text = "应用补丁";
+        applyPatchRadioButton.UseVisualStyleBackColor = true;
+        applyPatchRadioButton.CheckedChanged += operationModeRadioButton_CheckedChanged;
+        //
+        // restoreRadioButton
+        //
+        restoreRadioButton.AutoSize = true;
+        restoreRadioButton.Location = new Point(260, 178);
+        restoreRadioButton.Name = "restoreRadioButton";
+        restoreRadioButton.Size = new Size(107, 28);
+        restoreRadioButton.TabIndex = 8;
+        restoreRadioButton.Text = "还原资源";
+        restoreRadioButton.UseVisualStyleBackColor = true;
+        restoreRadioButton.CheckedChanged += operationModeRadioButton_CheckedChanged;
+        //
         // installDlcCheckBox
-        // 
+        //
         installDlcCheckBox.AutoSize = true;
         installDlcCheckBox.Checked = true;
         installDlcCheckBox.CheckState = CheckState.Checked;
-        installDlcCheckBox.Location = new Point(24, 180);
+        installDlcCheckBox.Location = new Point(24, 220);
         installDlcCheckBox.Name = "installDlcCheckBox";
         installDlcCheckBox.Size = new Size(144, 28);
-        installDlcCheckBox.TabIndex = 6;
+        installDlcCheckBox.TabIndex = 9;
         installDlcCheckBox.Text = "安装官方 DLC";
         installDlcCheckBox.UseVisualStyleBackColor = true;
+        installDlcCheckBox.CheckedChanged += patchOptionCheckBox_CheckedChanged;
         // 
         // patchMosaicCheckBox
         // 
         patchMosaicCheckBox.AutoSize = true;
         patchMosaicCheckBox.Checked = true;
         patchMosaicCheckBox.CheckState = CheckState.Checked;
-        patchMosaicCheckBox.Location = new Point(198, 180);
+        patchMosaicCheckBox.Location = new Point(198, 220);
         patchMosaicCheckBox.Name = "patchMosaicCheckBox";
         patchMosaicCheckBox.Size = new Size(144, 28);
-        patchMosaicCheckBox.TabIndex = 7;
+        patchMosaicCheckBox.TabIndex = 10;
         patchMosaicCheckBox.Text = "去除马赛克";
         patchMosaicCheckBox.UseVisualStyleBackColor = true;
+        patchMosaicCheckBox.CheckedChanged += patchOptionCheckBox_CheckedChanged;
         // 
         // backupCheckBox
         // 
         backupCheckBox.AutoSize = true;
         backupCheckBox.Checked = true;
         backupCheckBox.CheckState = CheckState.Checked;
-        backupCheckBox.Location = new Point(372, 180);
+        backupCheckBox.Location = new Point(372, 220);
         backupCheckBox.Name = "backupCheckBox";
         backupCheckBox.Size = new Size(162, 28);
-        backupCheckBox.TabIndex = 8;
+        backupCheckBox.TabIndex = 11;
         backupCheckBox.Text = "修改前自动备份";
         backupCheckBox.UseVisualStyleBackColor = true;
         // 
         // pathIdTextBox
         // 
-        pathIdTextBox.Location = new Point(24, 236);
+        pathIdTextBox.Location = new Point(24, 278);
         pathIdTextBox.Name = "pathIdTextBox";
         pathIdTextBox.Size = new Size(180, 31);
-        pathIdTextBox.TabIndex = 11;
+        pathIdTextBox.TabIndex = 13;
         // 
         // pathIdLabel
         // 
         pathIdLabel.AutoSize = true;
-        pathIdLabel.Location = new Point(24, 209);
+        pathIdLabel.Location = new Point(24, 251);
         pathIdLabel.Name = "pathIdLabel";
         pathIdLabel.Size = new Size(174, 24);
-        pathIdLabel.TabIndex = 10;
+        pathIdLabel.TabIndex = 12;
         pathIdLabel.Text = "马赛克 Shader PathID";
         // 
         // pathIdHintLabel
         // 
         pathIdHintLabel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
         pathIdHintLabel.AutoEllipsis = true;
-        pathIdHintLabel.Location = new Point(224, 239);
+        pathIdHintLabel.Location = new Point(224, 281);
         pathIdHintLabel.Name = "pathIdHintLabel";
         pathIdHintLabel.Size = new Size(564, 24);
-        pathIdHintLabel.TabIndex = 12;
+        pathIdHintLabel.TabIndex = 14;
         pathIdHintLabel.Text = "当前默认 1603；留空会自动扫描。";
         // 
         // runButton
         // 
-        runButton.Location = new Point(24, 296);
+        runButton.Location = new Point(24, 336);
         runButton.Name = "runButton";
         runButton.Size = new Size(180, 42);
-        runButton.TabIndex = 13;
+        runButton.TabIndex = 15;
         runButton.Text = "开始处理";
         runButton.UseVisualStyleBackColor = true;
         runButton.Click += runButton_Click;
-        // 
-        // restoreButton
-        //
-        restoreButton.Location = new Point(224, 296);
-        restoreButton.Name = "restoreButton";
-        restoreButton.Size = new Size(180, 42);
-        restoreButton.TabIndex = 14;
-        restoreButton.Text = "还原资源";
-        restoreButton.UseVisualStyleBackColor = true;
-        restoreButton.Click += restoreButton_Click;
         //
         // statusLabel
         // 
         statusLabel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
         statusLabel.AutoEllipsis = true;
-        statusLabel.Location = new Point(424, 305);
+        statusLabel.Location = new Point(224, 345);
         statusLabel.Name = "statusLabel";
-        statusLabel.Size = new Size(364, 24);
-        statusLabel.TabIndex = 15;
+        statusLabel.Size = new Size(564, 24);
+        statusLabel.TabIndex = 16;
         statusLabel.Text = "就绪";
         // 
         // logTextBox
         // 
         logTextBox.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-        logTextBox.Location = new Point(24, 360);
+        logTextBox.Location = new Point(24, 400);
         logTextBox.Multiline = true;
         logTextBox.Name = "logTextBox";
         logTextBox.ReadOnly = true;
         logTextBox.ScrollBars = ScrollBars.Vertical;
-        logTextBox.Size = new Size(764, 190);
-        logTextBox.TabIndex = 16;
+        logTextBox.Size = new Size(764, 150);
+        logTextBox.TabIndex = 17;
         // 
         // gamePathLabel
         // 
@@ -216,11 +243,13 @@ partial class Form1
         Controls.Add(gamePathLabel);
         Controls.Add(logTextBox);
         Controls.Add(statusLabel);
-        Controls.Add(restoreButton);
         Controls.Add(runButton);
         Controls.Add(backupCheckBox);
         Controls.Add(patchMosaicCheckBox);
         Controls.Add(installDlcCheckBox);
+        Controls.Add(restoreRadioButton);
+        Controls.Add(applyPatchRadioButton);
+        Controls.Add(operationModeLabel);
         Controls.Add(browseDlcButton);
         Controls.Add(dlcPathTextBox);
         Controls.Add(browseGameButton);
@@ -239,6 +268,9 @@ partial class Form1
     private Button browseGameButton;
     private TextBox dlcPathTextBox;
     private Button browseDlcButton;
+    private Label operationModeLabel;
+    private RadioButton applyPatchRadioButton;
+    private RadioButton restoreRadioButton;
     private CheckBox installDlcCheckBox;
     private CheckBox patchMosaicCheckBox;
     private CheckBox backupCheckBox;
@@ -246,7 +278,6 @@ partial class Form1
     private Label pathIdLabel;
     private Label pathIdHintLabel;
     private Button runButton;
-    private Button restoreButton;
     private Label statusLabel;
     private TextBox logTextBox;
     private Label gamePathLabel;
