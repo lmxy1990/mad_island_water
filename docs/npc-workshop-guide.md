@@ -2,7 +2,7 @@
 
 本文根据 Emade Plus 官方页面整理：<https://emadeplus.com/workshop-npc/>
 
-图片来源均为官方教程页面。本文只引用远程图片，不在仓库中重新分发官方素材。
+图片来源均为官方教程页面。仓库内保存了原图副本，并在正文中使用添加了中文菜单标注的版本，便于中文用户按步骤操作。
 
 ## 准备工作
 
@@ -19,7 +19,7 @@
 - **必须使用 Spine 3.8.99 导出。**
 - Mad Island 的角色数据是按 Spine 3.8.99 制作的，版本不一致会导致游戏无法读取。
 
-![官方 NPC Workshop 页面](https://emadeplus.com/wp-content/uploads/2025/07/image-6.png)
+![官方 NPC Workshop 页面](assets/npc-workshop/01-official-page.png)
 
 ## Spine 数据规格
 
@@ -69,7 +69,7 @@ MyNpc/
   MyNpc.png
 ```
 
-![Spine 导出后的文件结构](https://emadeplus.com/wp-content/uploads/2025/07/image-4.png)
+![Spine 导出后的文件结构](assets/npc-workshop/02-export-files.png)
 
 ## 在游戏中加载 Spine NPC
 
@@ -78,7 +78,7 @@ MyNpc/
 1. 选择 `Workshop`
 2. 选择 `Load Spine Character`
 
-![标题画面进入 Workshop](https://emadeplus.com/wp-content/uploads/2025/07/image-1024x568.png)
+![标题画面进入 Workshop](assets/npc-workshop/03-workshop-menu.png)
 
 加载流程：
 
@@ -87,9 +87,9 @@ MyNpc/
 3. 点击 `Load`，游戏会列出文件夹里的角色数据。
 4. 在列表里点击要读取的数据。
 
-![加载 NPC 文件夹](https://emadeplus.com/wp-content/uploads/2025/07/image-5-1024x578.png)
+![加载 NPC 文件夹](assets/npc-workshop/04-load-folder.png)
 
-![选择已加载的数据](https://emadeplus.com/wp-content/uploads/2025/07/image-2.png)
+![选择已加载的数据](assets/npc-workshop/05-select-data.png)
 
 ## 设置 NPC 参数
 
@@ -117,7 +117,7 @@ npcInfo.xml
 
 有了这个文件，NPC 参数设置就完成了。
 
-![NPC 参数设置](https://emadeplus.com/wp-content/uploads/2025/07/image-7-1024x578.png)
+![NPC 参数设置](assets/npc-workshop/06-parameters.png)
 
 ## 预览操作
 
@@ -166,11 +166,11 @@ Sucessfully submit item to Steam
 - 是否已经保存参数并生成 `npcInfo.xml`
 - 上传面板里的标题、截图、说明是否有漏填
 
-![打开 Publish 面板](https://emadeplus.com/wp-content/uploads/2025/07/image-8-1024x575.png)
+![打开 Publish 面板](assets/npc-workshop/07-publish-panel.png)
 
-![填写标题与截图](https://emadeplus.com/wp-content/uploads/2025/07/image-9-1024x574.png)
+![填写标题与截图](assets/npc-workshop/08-snapshot-title.png)
 
-![上传说明与发布](https://emadeplus.com/wp-content/uploads/2025/07/image-10-1024x575.png)
+![上传说明与发布](assets/npc-workshop/09-description-publish.png)
 
 ## 在游戏中召唤 NPC
 
@@ -190,9 +190,9 @@ Sucessfully submit item to Steam
 - 点击 `Friend`：在当前位置召唤为伙伴
 - 点击 `Enemy`：在稍远的随机位置生成 1 个敌人
 
-![召唤 Workshop NPC](https://emadeplus.com/wp-content/uploads/2025/07/image-12-1024x576.png)
+![召唤 Workshop NPC](assets/npc-workshop/10-summon-menu.png)
 
-![加载文件并生成 NPC](https://emadeplus.com/wp-content/uploads/2025/07/image-15-1024x575.png)
+![加载文件并生成 NPC](assets/npc-workshop/11-load-files.png)
 
 ## 解除读取
 
@@ -210,7 +210,7 @@ Sucessfully submit item to Steam
 4. 和上传时一样填写 `Title`、`Snapshot`、`Description`。
 5. 点击 `Update` 完成更新。
 
-![更新 Workshop 物品](https://emadeplus.com/wp-content/uploads/2025/07/image-17-1024x573.png)
+![更新 Workshop 物品](assets/npc-workshop/12-update-item.png)
 
 ## 高级规格：颜色编辑 slot 名称
 
@@ -339,4 +339,3 @@ Tail
 - 是否生成了 `npcInfo.xml`
 - 上传面板是否填写了标题、截图和说明
 - Steam 是否正常登录
-
