@@ -38,8 +38,12 @@ D:\Program Files (x86)\Steam\steamapps\common\Mad Island
 
 ## 构建
 
+使用 Visual Studio 时，直接打开根目录下的 `MadIslandWater.sln`。
+
+命令行构建：
+
 ```powershell
-dotnet build .\MadIslandWater\MadIslandWater.csproj -c Release
+.\scripts\build.ps1
 ```
 
 项目引用了 `third_party\AssetsTools.NET\AssetsTools.NET.dll`。该依赖已放入仓库，因为当前补丁逻辑依赖这个版本的 API。
@@ -47,10 +51,10 @@ dotnet build .\MadIslandWater\MadIslandWater.csproj -c Release
 ## 发布
 
 ```powershell
-dotnet publish .\MadIslandWater\MadIslandWater.csproj -c Release -r win-x64 --self-contained false -o .\publish\MadIslandWater
+.\scripts\publish.ps1
 ```
 
-发布后的程序需要安装 .NET 10 Windows Desktop Runtime。
+默认发布到 `publish\MadIslandWater`，并会把 `dlc\dlc_00.zip` 一起复制到发布目录。发布后的程序需要安装 .NET 10 Windows Desktop Runtime。
 
 ## 命令行模式
 
